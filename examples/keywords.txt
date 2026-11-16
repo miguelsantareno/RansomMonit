@@ -1,0 +1,5 @@
+# One keyword per line. Lines starting with # are ignored.
+# Put the terms you want flagged if they appear on a leak page:
+Your Company Name
+yourcompany.com
+ACME Corp

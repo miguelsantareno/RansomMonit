@@ -170,7 +170,9 @@ def fetch(session: requests.Session, url: str, timeout: int = 90,
 def extract(html: str) -> dict:
     """Pull title, visible text (capped) and links from an HTML page."""
     if not _HAS_BS4:
-        return {"title": None, "text_len": len(html), "links": []}
+        text = html
+        return {"title": None, "text_len": len(text), "text": text[:20000],
+                "links": [], "_fulltext": text}
     soup = BeautifulSoup(html, "html.parser")
     for t in soup(["script", "style", "noscript"]):
         t.decompose()
@@ -178,14 +180,23 @@ def extract(html: str) -> dict:
     text = " ".join(soup.get_text(" ").split())
     links = sorted({a["href"] for a in soup.find_all("a", href=True)})
     return {"title": title, "text_len": len(text), "text": text[:20000],
-            "links": links[:200]}
+            "links": links[:200], "_fulltext": text}
+
+
+def match_keywords(text: str, keywords: list[str]) -> list[str]:
+    """Return the keywords (case-insensitive) found in the page text."""
+    if not keywords or not text:
+        return []
+    low = text.lower()
+    return [kw for kw in keywords if kw.lower() in low]
 
 
 # --------------------------------------------------------------------------- #
 # Orchestration
 # --------------------------------------------------------------------------- #
 def run(entries: list[dict], session: requests.Session, delay: float,
-        out_dir: Path) -> list[dict]:
+        out_dir: Path, keywords: list[str] | None = None) -> list[dict]:
+    keywords = keywords or []
     out_dir.mkdir(parents=True, exist_ok=True)
     pages_dir = out_dir / "pages"
     pages_dir.mkdir(exist_ok=True)
@@ -198,10 +209,17 @@ def run(entries: list[dict], session: requests.Session, delay: float,
             host = (urlparse(e["url"]).netloc or f"n{i}").replace(":", "_")
             raw_path = pages_dir / f"{i:03d}_{host[:40]}.html"
             raw_path.write_text(resp.text, encoding="utf-8", errors="replace")
+            info = extract(resp.text)
+            fulltext = info.pop("_fulltext", "")
+            hits = match_keywords(fulltext, keywords)
             rec.update({"fetched": True, "http_status": resp.status_code,
-                        "raw_file": str(raw_path), **extract(resp.text)})
+                        "raw_file": str(raw_path), "matched_keywords": hits,
+                        **info})
+            if hits:
+                print(f"    *** MATCH: {', '.join(hits)}", file=sys.stderr)
         except RuntimeError as exc:
-            rec.update({"fetched": False, "error": str(exc)})
+            rec.update({"fetched": False, "error": str(exc),
+                        "matched_keywords": []})
         results.append(rec)
         if i < len(entries):
             time.sleep(delay)  # be polite: don't hammer the service
@@ -209,15 +227,31 @@ def run(entries: list[dict], session: requests.Session, delay: float,
 
 
 def export(records: list[dict], out_dir: Path) -> None:
+    # JSON: drop the bulky raw text to keep the index light; the full HTML is
+    # already saved under pages/.
+    slim = [{k: v for k, v in r.items() if k != "text"} for r in records]
     (out_dir / "results.json").write_text(
-        json.dumps(records, ensure_ascii=False, indent=2), encoding="utf-8")
+        json.dumps(slim, ensure_ascii=False, indent=2), encoding="utf-8")
+
     cols = ["name", "url", "status", "is_onion", "fetched",
-            "http_status", "title", "text_len", "error"]
+            "http_status", "title", "text_len", "matched_keywords", "error"]
     with (out_dir / "results.csv").open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore")
         w.writeheader()
         for r in records:
-            w.writerow(r)
+            row = dict(r)
+            row["matched_keywords"] = ";".join(r.get("matched_keywords") or [])
+            w.writerow(row)
+
+    # Separate alerts file: only pages where a keyword matched.
+    alerts = [{"name": r["name"], "url": r["url"],
+               "matched_keywords": r.get("matched_keywords", []),
+               "raw_file": r.get("raw_file")}
+              for r in records if r.get("matched_keywords")]
+    if alerts:
+        (out_dir / "alerts.json").write_text(
+            json.dumps(alerts, ensure_ascii=False, indent=2), encoding="utf-8")
+    return None
 
 
 def main() -> int:
@@ -235,6 +269,10 @@ def main() -> int:
     p.add_argument("--dry-run", action="store_true",
                    help="parse and list targets only, fetch nothing")
     p.add_argument("--limit", type=int, help="cap the number of targets (testing)")
+    p.add_argument("--keywords", help="comma-separated terms to flag in page "
+                   "text (e.g. your org name, domains)")
+    p.add_argument("--keywords-file", type=Path,
+                   help="file with one keyword per line")
     p.add_argument("--delay", type=float, default=4.0,
                    help="pause between requests in seconds (default 4)")
     p.add_argument("--socks-host", default=DEFAULT_SOCKS_HOST)
@@ -288,12 +326,26 @@ def main() -> int:
         return 1
 
     # 4) collect + export
-    records = run(targets, session, args.delay, args.out_dir)
+    keywords: list[str] = []
+    if args.keywords:
+        keywords += [k.strip() for k in args.keywords.split(",") if k.strip()]
+    if args.keywords_file:
+        keywords += [ln.strip() for ln in args.keywords_file.read_text().splitlines()
+                     if ln.strip() and not ln.startswith("#")]
+    if keywords:
+        print(f"Watching for {len(keywords)} keyword(s): "
+              f"{', '.join(keywords)}", file=sys.stderr)
+
+    records = run(targets, session, args.delay, args.out_dir, keywords)
     export(records, args.out_dir)
     ok = sum(1 for r in records if r.get("fetched"))
+    n_alerts = sum(1 for r in records if r.get("matched_keywords"))
     print(f"\nDone: {ok}/{len(records)} pages collected. "
           f"Results in {args.out_dir}/ (results.json, results.csv)",
           file=sys.stderr)
+    if keywords:
+        where = f" -> {args.out_dir}/alerts.json" if n_alerts else ""
+        print(f"Keyword matches: {n_alerts} page(s){where}", file=sys.stderr)
     return 0
 
 

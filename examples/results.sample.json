@@ -1,0 +1,26 @@
+[
+  {
+    "name": "ACME-Leaks",
+    "url": "http://abcdefghij234567example0000000000000000000000000000.onion",
+    "status": "ONLINE",
+    "channel": "",
+    "is_onion": true,
+    "fetched": true,
+    "http_status": 200,
+    "raw_file": "out/pages/004_abcdefghij234567example.onion.html",
+    "matched_keywords": ["ACME Corp"],
+    "title": "ACME-Leaks :: Victims",
+    "text_len": 4821,
+    "links": ["http://abcdefghij234567example.onion/post/acme-corp"]
+  },
+  {
+    "name": "SomeGang",
+    "url": "http://zyxwvutsrq765432example0000000000000000000000000000.onion",
+    "status": "ONLINE",
+    "channel": "",
+    "is_onion": true,
+    "fetched": false,
+    "matched_keywords": [],
+    "error": "http://...onion: ConnectionError (circuit timed out)"
+  }
+]

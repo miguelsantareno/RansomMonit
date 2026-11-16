@@ -61,7 +61,20 @@ python3 deepdark_monitor.py --list ransomware_gang --only-online --limit 10 -o o
 
 # Use a local copy of the list instead of GitHub:
 python3 deepdark_monitor.py --file ./ransomware_gang.md -o out/
+
+# Watch for keywords (e.g. your org / domains) and raise alerts on matches:
+python3 deepdark_monitor.py --list ransomware_gang --only-online \
+    --keywords-file examples/keywords.txt -o out/
 ```
+
+### Keyword monitoring
+
+Pass `--keywords "Term A,Term B"` or `--keywords-file path` (one term per line)
+and every fetched page is scanned (case-insensitive). Matches are recorded in the
+`matched_keywords` field and any page with a hit is also written to
+`out/alerts.json`. This is the quickest way to get alerted when your organization
+or a domain shows up on a leak site. See [`examples/`](examples/) for sample
+output and a starter keyword file.
 
 ### Options
 
@@ -80,8 +93,9 @@ python3 deepdark_monitor.py --file ./ransomware_gang.md -o out/
 ### Output
 
 - `out/pages/NNN_host.html` — raw HTML of each fetched page
-- `out/results.json` — structured records (name, url, status, title, text, links…)
+- `out/results.json` — structured records (name, url, status, title, links, matched_keywords…)
 - `out/results.csv` — flat summary for spreadsheets
+- `out/alerts.json` — only the pages where a keyword matched (written when there are hits)
 
 ---
 

@@ -16,5 +16,5 @@ jobs:
         run: pip install -r requirements.txt
       - name: Byte-compile
         run: python -m py_compile deepdark_monitor.py
-      - name: Smoke test (parser, dry-run with no network)
+      - name: CLI help
         run: python deepdark_monitor.py --help
