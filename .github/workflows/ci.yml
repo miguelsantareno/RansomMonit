@@ -15,6 +15,6 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
       - name: Byte-compile
-        run: python -m py_compile deepdark_monitor.py
+        run: python -m py_compile ransommonit.py
       - name: CLI help
-        run: python deepdark_monitor.py --help
+        run: python ransommonit.py --help

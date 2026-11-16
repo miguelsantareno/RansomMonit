@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-deepdark_monitor.py — Collect dark/deep web data from the deepdarkCTI lists
+ransommonit.py — Collect dark/deep web data from the deepdarkCTI lists
 (https://github.com/fastfire/deepdarkCTI).
 
 What it does:
@@ -24,13 +24,13 @@ Requirements:
 
 Examples:
   # Only list the ONLINE .onion targets (no fetching):
-  python3 deepdark_monitor.py --list ransomware_gang --dry-run --only-online
+  python3 ransommonit.py --list ransomware_gang --dry-run --only-online
 
   # Fetch the ONLINE .onion pages through Tor:
-  python3 deepdark_monitor.py --list ransomware_gang --only-online -o out/
+  python3 ransommonit.py --list ransomware_gang --only-online -o out/
 
   # Use a local file instead of GitHub:
-  python3 deepdark_monitor.py --file ./ransomware_gang.md -o out/
+  python3 ransommonit.py --file ./ransomware_gang.md -o out/
 """
 
 from __future__ import annotations

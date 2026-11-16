@@ -1,4 +1,4 @@
-# deepdarkCTI Monitor
+# RansomMonit
 
 A small, defensive **threat-intelligence** tool that collects dark/deep web data
 from the curated lists in [fastfire/deepdarkCTI](https://github.com/fastfire/deepdarkCTI).
@@ -54,16 +54,16 @@ Tor exposes a SOCKS5 proxy at `127.0.0.1:9050` (the `tor` daemon) or
 
 ```bash
 # List the ONLINE .onion targets without fetching anything (no Tor needed):
-python3 deepdark_monitor.py --list ransomware_gang --dry-run --only-online
+python3 ransommonit.py --list ransomware_gang --dry-run --only-online
 
 # Fetch the first 10 ONLINE .onion pages through Tor (good for a first test):
-python3 deepdark_monitor.py --list ransomware_gang --only-online --limit 10 -o out/
+python3 ransommonit.py --list ransomware_gang --only-online --limit 10 -o out/
 
 # Use a local copy of the list instead of GitHub:
-python3 deepdark_monitor.py --file ./ransomware_gang.md -o out/
+python3 ransommonit.py --file ./ransomware_gang.md -o out/
 
 # Watch for keywords (e.g. your org / domains) and raise alerts on matches:
-python3 deepdark_monitor.py --list ransomware_gang --only-online \
+python3 ransommonit.py --list ransomware_gang --only-online \
     --keywords-file examples/keywords.txt -o out/
 ```
 
