@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Tool output (may contain collected dark-web data — never commit)
+deepdark_out/
+out/
+*.html
+results.json
+results.csv
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
