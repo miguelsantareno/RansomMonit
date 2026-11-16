@@ -76,6 +76,61 @@ and every fetched page is scanned (case-insensitive). Matches are recorded in th
 or a domain shows up on a leak site. See [`examples/`](examples/) for sample
 output and a starter keyword file.
 
+### Change detection (what makes it a *monitor*)
+
+Each run stores a compact snapshot in `out/state.json`. On the next run the tool
+diffs against it and reports only **what changed**, writing `out/changes.json`:
+
+| Event | Meaning |
+| ----- | ------- |
+| `NEW_TARGET` | URL never seen before |
+| `BACK_ONLINE` | previously unreachable, now fetched |
+| `WENT_OFFLINE` | previously fetched, now unreachable |
+| `CONTENT_CHANGED` | page text hash differs (likely new victims/posts) |
+| `KEYWORD_MATCH` | a keyword matched that did not match last time |
+
+The first run just establishes the baseline. Use `--no-state` to disable, or
+`--state-file` to point it elsewhere. This pairs naturally with a cron job.
+
+### Notifications
+
+Send a summary of matches and/or changes to a Slack- or Discord-compatible
+incoming webhook:
+
+```bash
+python3 ransommonit.py --list ransomware_gang --only-online -o out/ \
+    --keywords-file examples/keywords.txt \
+    --notify-webhook https://hooks.slack.com/services/XXX \
+    --notify-on changes          # matches | changes | all
+```
+
+### Tor circuit rotation
+
+If a lot of exits get blocked, rotate the circuit every N requests via Tor's
+control port (needs `ControlPort 9051` and an auth method in your `torrc`):
+
+```bash
+python3 ransommonit.py --list ransomware_gang -o out/ \
+    --tor-control-port 9051 --renew-every 25
+```
+
+### Scheduling (example)
+
+```cron
+# Every 6 hours: fetch, diff against last run, alert on changes.
+0 */6 * * * cd /path/to/RansomMonit && /usr/bin/python3 ransommonit.py \
+    --list ransomware_gang --only-online -o out/ \
+    --keywords-file keywords.txt \
+    --notify-webhook "$SLACK_WEBHOOK" --notify-on changes >> monitor.log 2>&1
+```
+
+### Tests
+
+```bash
+pip install pytest
+pytest -q
+```
+
 ### Options
 
 | Flag | Description |
@@ -93,9 +148,11 @@ output and a starter keyword file.
 ### Output
 
 - `out/pages/NNN_host.html` — raw HTML of each fetched page
-- `out/results.json` — structured records (name, url, status, title, links, matched_keywords…)
+- `out/results.json` — structured records (name, url, status, title, links, matched_keywords, content_hash…)
 - `out/results.csv` — flat summary for spreadsheets
 - `out/alerts.json` — only the pages where a keyword matched (written when there are hits)
+- `out/changes.json` — what changed since the previous run (written when there are changes)
+- `out/state.json` — snapshot used for change detection (do not delete between runs)
 
 ---
 

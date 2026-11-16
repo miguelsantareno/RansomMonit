@@ -17,3 +17,8 @@ results.csv
 .DS_Store
 .idea/
 .vscode/
+
+# RansomMonit runtime state / change logs (never commit collected data)
+state.json
+changes.json
+monitor.log
